@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local};
+use chrono::Local;
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use edtui::{EditorEventHandler, EditorState};
@@ -150,22 +150,20 @@ impl App {
 
     fn select_next_note(&mut self) {
         self.save_editor_content_to_current_note();
-        let from_index = self.state.list_state.selected().unwrap_or(0);
         self.state.list_state.next();
-        let to_index = self.state.list_state.selected().unwrap_or(0);
+        let to_index = self.state.list_state.selected.unwrap_or(0);
         self.load_note_to_editor(to_index);
     }
 
     fn select_previous_note(&mut self) {
         self.save_editor_content_to_current_note();
-        let from_index = self.state.list_state.selected().unwrap_or(0);
         self.state.list_state.previous();
-        let to_index = self.state.list_state.selected().unwrap_or(0);
+        let to_index = self.state.list_state.selected.unwrap_or(0);
         self.load_note_to_editor(to_index);
     }
 
     fn save_editor_content_to_current_note(&mut self) {
-        if let Some(selected) = self.state.list_state.selected() {
+        if let Some(selected) = self.state.list_state.selected {
             if let Some(note) = self.state.notes.get_mut(selected) {
                 let content_rows = self
                     .state
@@ -208,7 +206,7 @@ impl App {
     }
 
     fn delete_current_note(&mut self) {
-        if let Some(selected) = self.state.list_state.selected() {
+        if let Some(selected) = self.state.list_state.selected {
             if !self.state.notes.is_empty() {
                 self.state.notes.remove(selected);
 
@@ -221,7 +219,7 @@ impl App {
                         .select(Some(self.state.notes.len() - 1));
                 }
 
-                if let Some(new_selected) = self.state.list_state.selected() {
+                if let Some(new_selected) = self.state.list_state.selected {
                     self.load_note_to_editor(new_selected);
                 }
             }

@@ -1,8 +1,7 @@
 use ratatui::{
     layout::{Alignment, Rect},
-    style::{Color, Style},
     symbols,
-    text::{Line, Span},
+    text::Span,
     widgets::{Block, Borders, Paragraph, Wrap},
     Frame,
 };
@@ -10,7 +9,7 @@ use ratatui::{
 use crate::app::AppState;
 
 pub fn render_preview(frame: &mut Frame, state: &mut AppState, area: Rect) {
-    let selected = state.list_state.selected().unwrap_or(0);
+    let selected = state.list_state.selected.unwrap_or(0);
     if let Some(note) = state.notes.get(selected) {
         let content = note.content.clone();
 

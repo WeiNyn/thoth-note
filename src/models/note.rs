@@ -5,7 +5,7 @@ use ratatui::{
     style::{Color, Style},
     symbols,
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Widget, Wrap},
+    widgets::{Block, Paragraph, Widget, Wrap},
 };
 
 #[derive(Debug, Clone)]
@@ -37,16 +37,21 @@ impl Widget for Note {
             (Color::Gray, Style::default().fg(Color::Gray))
         };
 
-        Paragraph::new(vec![Line::from(self.content.as_str()).style(Style::default().fg(fg_color))])
-            .block(
-                Block::bordered()
-                    .border_style(border_style)
-                    .border_set(symbols::border::ROUNDED)
-                    .title(Span::styled(self.title.as_str(), Style::default().fg(fg_color)).into_centered_line())
-                    .padding(ratatui::widgets::Padding::left(1)),
-            )
-            .alignment(Alignment::Left)
-            .wrap(Wrap { trim: true })
-            .render(area, buf);
+        Paragraph::new(vec![
+            Line::from(self.content.as_str()).style(Style::default().fg(fg_color))
+        ])
+        .block(
+            Block::bordered()
+                .border_style(border_style)
+                .border_set(symbols::border::ROUNDED)
+                .title(
+                    Span::styled(self.title.as_str(), Style::default().fg(fg_color))
+                        .into_centered_line(),
+                )
+                .padding(ratatui::widgets::Padding::left(1)),
+        )
+        .alignment(Alignment::Left)
+        .wrap(Wrap { trim: true })
+        .render(area, buf);
     }
 }

@@ -3,7 +3,6 @@ mod layout;
 mod note_list;
 mod preview;
 
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::Frame;
 
 use crate::app::{AppState, View};

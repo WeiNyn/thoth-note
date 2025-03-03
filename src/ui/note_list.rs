@@ -1,15 +1,7 @@
-use ratatui::{
-    layout::Rect,
-    style::{Color, Style},
-    symbols,
-    text::Span,
-    widgets::{Block, Borders, List, ListItem},
-    Frame,
-};
+use ratatui::{layout::Rect, Frame};
 use tui_widget_list::{ListBuilder, ListView};
 
 use crate::app::AppState;
-use crate::models::note::Note;
 
 pub fn render_note_list(frame: &mut Frame, state: &mut AppState, area: Rect) {
     let builder = ListBuilder::new(|context| {
