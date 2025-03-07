@@ -8,5 +8,7 @@ pub enum Command {
     NewNote,
     SaveNote,
     DeleteNote,
+    ScrollDown,
+    ScrollUp,
     // Add more commands as needed
 }

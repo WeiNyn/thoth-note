@@ -5,7 +5,7 @@ use crate::app::AppState;
 
 pub fn render_note_list(frame: &mut Frame, state: &mut AppState, area: Rect) {
     let builder = ListBuilder::new(|context| {
-        let mut note = state.notes[context.index.clone()].clone();
+        let mut note = state.notes[context.index].clone();
         note.selected = context.is_selected;
         (note, 3)
     });
