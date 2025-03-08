@@ -1,6 +1,6 @@
-# Welcome to RNote! 📝
+# Welcome to Thoth! 📝
 
-RNote is a powerful terminal-based note-taking application with Markdown support. This guide will help you get started and make the most of its features.
+Thoth is a powerful terminal-based note-taking application with Markdown support. This guide will help you get started and make the most of its features.
 
 ## 🎯 Core Features
 
@@ -11,7 +11,7 @@ RNote is a powerful terminal-based note-taking application with Markdown support
 
 ## 💻 Interface Layout
 
-RNote has three main views:
+Thoth has three main views:
 
 1. **Note List** (left panel): Browse and manage your notes
 2. **Editor** (main panel): Write and edit your content
@@ -65,7 +65,7 @@ def greet(name):
 
 ```rust
 fn main() {
-    println!("Welcome to RNote!");
+    println!("Welcome to Thoth!");
 }
 ```
 
@@ -88,12 +88,12 @@ fn main() {
 
 ### Links and Images
 
-- [Visit RNote Repository](https://github.com/username/rnote)
+- [Visit Thoth Repository](https://github.com/WeiNyn/thoth)
 - ![Image Alt Text](image.png)
 
 ## 🎨 Theme Support
 
-RNote uses the Catppuccin theme for a pleasant viewing experience with syntax highlighting for code blocks.
+Thoth uses the Catppuccin theme for a pleasant viewing experience with syntax highlighting for code blocks.
 
 ## 🚀 Tips & Tricks
 

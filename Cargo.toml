@@ -1,5 +1,5 @@
 [package]
-name = "rnote"
+name = "thoth"
 version = "0.1.0"
 authors = ["WeiNyn <nguyenhuy17798@gmail.com>"]
 license = "MIT"
