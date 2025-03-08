@@ -1,8 +1,8 @@
 use crate::theme::palette;
-use color_eyre::owo_colors::OwoColorize;
 use ratatui::{
     layout::{Alignment, Margin, Rect},
     style::{Color, Modifier, Style, Stylize},
+    symbols::{self},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarState, Wrap},
     Frame,
@@ -25,9 +25,18 @@ use syntect::{
 use tracing::{debug, instrument, warn};
 
 pub fn render_preview(frame: &mut Frame, state: &mut AppState, area: Rect) {
+    let content = state
+        .editor_state
+        .lines
+        .flatten(&Some('\n'))
+        .iter()
+        .map(|row| row.to_string())
+        .collect::<Vec<String>>()
+        .join("");
+
     let selected = state.list_state.selected.unwrap_or(0);
+
     if let Some(note) = state.notes.get(selected) {
-        let content = note.content.clone();
         let area_width = area.width;
         let text = from_str(&content, area_width);
         let paragraph = Paragraph::new(text)
@@ -35,13 +44,15 @@ pub fn render_preview(frame: &mut Frame, state: &mut AppState, area: Rect) {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
+                    .border_set(symbols::border::ROUNDED)
+                    .border_style(Style::default().fg(palette::TEAL))
                     .title(note.title.as_str())
                     .title_style(
                         Style::default()
-                            .fg(Color::Rgb(238, 212, 159))
+                            .fg(palette::MAROON)
                             .add_modifier(Modifier::BOLD),
                     )
-                    .border_style(Style::default().fg(Color::White)),
+                    .title_alignment(Alignment::Center),
             )
             .scroll((state.preview_scroll_offset as u16, 0))
             .wrap(Wrap { trim: false });

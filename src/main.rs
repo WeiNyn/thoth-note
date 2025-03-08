@@ -1,6 +1,7 @@
 pub mod app;
 pub mod commands;
 pub mod models;
+pub mod storage;
 pub mod theme;
 pub mod ui;
 pub use app::App;

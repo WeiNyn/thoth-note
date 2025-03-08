@@ -58,13 +58,13 @@ impl Default for AppTheme {
             info: Color::Blue,
             success: Color::Green,
 
-            selected_style: Style::default().fg(Color::Green),
-            normal_style: Style::default().fg(Color::Gray),
+            selected_style: Style::default().fg(palette::GREEN),
+            normal_style: Style::default().fg(palette::TEXT),
             title_style: Style::default()
-                .fg(Color::Yellow)
+                .fg(palette::YELLOW)
                 .add_modifier(Modifier::BOLD),
             header_style: Style::default()
-                .fg(Color::Blue)
+                .fg(palette::SKY)
                 .add_modifier(Modifier::BOLD),
         }
     }

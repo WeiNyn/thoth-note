@@ -10,5 +10,7 @@ pub enum Command {
     DeleteNote,
     ScrollDown,
     ScrollUp,
-    // Add more commands as needed
+    RenameNote,
+    SubmitRename,
+    CancelRename,
 }

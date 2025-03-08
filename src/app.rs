@@ -1,18 +1,25 @@
 use chrono::Local;
 use color_eyre::Result;
-use crossterm::event::{
-    self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind,
-};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use edtui::{EditorEventHandler, EditorState};
 use edtui_jagged::Jagged;
-use ratatui::widgets::{ScrollbarOrientation, ScrollbarState};
 use ratatui::{DefaultTerminal, Frame};
 use tui_widget_list::ListState;
 
 use crate::commands::Command;
 use crate::models::note::Note;
+use crate::storage::{fs::FSStorage, Storage};
 use crate::theme::AppTheme;
 use crate::ui;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum View {
+    List,
+    Editor,
+    Preview,
+    Rename,
+    LivePreview,
+}
 
 pub struct AppState {
     pub notes: Vec<Note>,
@@ -21,17 +28,14 @@ pub struct AppState {
     pub preview_scroll_offset: usize,
     pub current_view: View,
     pub theme: AppTheme,
-}
-
-pub enum View {
-    List,
-    Editor,
-    Preview,
+    pub rename_buffer: String,
+    pub creating_new_note: bool,
 }
 
 pub struct App {
     state: AppState,
     editor_event_handler: EditorEventHandler,
+    storage: Box<dyn Storage>,
     running: bool,
 }
 
@@ -44,8 +48,10 @@ impl Default for AppState {
             list_state,
             editor_state: EditorState::default(),
             preview_scroll_offset: 0,
-            current_view: View::Preview,
+            current_view: View::LivePreview,
             theme: AppTheme::default(),
+            rename_buffer: String::new(),
+            creating_new_note: false,
         }
     }
 }
@@ -54,8 +60,34 @@ impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
         let mut state = AppState::default();
-        // Initialize with example notes
-        state.notes = Self::create_example_notes();
+
+        // Create storage
+        let storage = Box::new(FSStorage::new());
+
+        // Initialize storage
+        if let Err(e) = storage.init() {
+            eprintln!("Failed to initialize storage: {}", e);
+        }
+
+        // Try to load notes from storage
+        let mut loaded_notes = Vec::new();
+        if let Ok(notes) = storage.list_notes() {
+            loaded_notes = notes;
+        }
+
+        // If no notes were loaded, create example notes
+        if loaded_notes.is_empty() {
+            loaded_notes = Self::create_example_notes();
+
+            // Save example notes to storage
+            for note in &loaded_notes {
+                if let Err(e) = storage.write_note(note) {
+                    eprintln!("Failed to save note '{}': {}", note.title, e);
+                }
+            }
+        }
+
+        state.notes = loaded_notes;
 
         // Set initial editor content
         if !state.notes.is_empty() {
@@ -66,121 +98,27 @@ impl App {
         Self {
             state,
             editor_event_handler: EditorEventHandler::default(),
+            storage,
             running: false,
         }
     }
 
     fn create_example_notes() -> Vec<Note> {
-        let full_example_string = r#"
-# EasyMark
-EasyMark is a markup language, designed for extreme simplicity.
-
-```
-WARNING: EasyMark is still an evolving specification,
-and is also missing some features.
-```
-
-----------------
-
-# At a glance
-- inline text:
-  - normal, `code`, *strong*, ~strikethrough~, _underline_, /italics/, ^raised^, $small$
-  - `\` escapes the next character
-  - [hyperlink](https://github.com/emilk/egui)
-  - Embedded URL: <https://github.com/emilk/egui>
-- `# ` header
-- `---` separator (horizontal line)
-- `> ` quote
-- `- ` bullet list
-- `1. ` numbered list
-- \`\`\` code fence
-- a^2^ + b^2^ = c^2^
-- $Remember to read the small print$
-
-# Design
-> /"Why do what everyone else is doing, when everyone else is already doing it?"
->   \- Emil
-
-Goals:
-1. easy to parse
-2. easy to learn
-3. similar to markdown
-
-[The reference parser](https://github.com/emilk/egui/blob/master/crates/egui_demo_lib/src/easy_mark/easy_mark_parser.rs) is \~250 lines of code, using only the Rust standard library. The parser uses no look-ahead or recursion.
-
-There is never more than one way to accomplish the same thing, and each special character is only used for one thing. For instance `*` is used for *strong* and `-` is used for bullet lists. There is no alternative way to specify the *strong* style or getting a bullet list.
-
-Similarity to markdown is kept when possible, but with much less ambiguity and some improvements (like _underlining_).
-
-# Details
-All style changes are single characters, so it is `*strong*`, NOT `**strong**`. Style is reset by a matching character, or at the end of the line.
-
-Style change characters and escapes (`\`) work everywhere except for in inline code, code blocks and in URLs.
-
-You can mix styles. For instance: /italics _underline_/ and *strong `code`*.
-
-You can use styles on URLs: ~my webpage is at <http://www.example.com>~.
-
-Newlines are preserved. If you want to continue text on the same line, just do so. Alternatively, escape the newline by ending the line with a backslash (`\`). \
-Escaping the newline effectively ignores it.
-
-The style characters are chosen to be similar to what they are representing:
-  `_` = _underline_
-  `~` = ~strikethrough~ (`-` is used for bullet points)
-  `/` = /italics/
-  `*` = *strong*
-  `$` = $small$
-  `^` = ^raised^
-
-# To do
-- Sub-headers (`## h2`, `### h3` etc)
-- Hotkey Editor
-- International keyboard algorithm for non-letter keys
-- ALT+SHIFT+Num1 is not a functioning hotkey
-- Tab Indent Increment/Decrement CTRL+], CTRL+[
-
-- Images
-  - we want to be able to optionally specify size (width and\/or height)
-  - centering of images is very desirable
-  - captioning (image with a text underneath it)
-  - `![caption=My image][width=200][center](url)` ?
-- Nicer URL:s
-  - `<url>` and `[url](url)` do the same thing yet look completely different.
-  - let's keep similarity with images
-- Tables
-- Inspiration: <https://mycorrhiza.wiki/help/en/mycomarkup>
-        "#;
-
-        let mut notes = Vec::new();
-        notes.push(Note {
-            title: "Welcome to EasyMark".to_string(),
-            content: full_example_string.to_string(),
+        // ... [previous implementation]
+        vec![Note {
+            title: "Welcome".to_string(),
+            content: "Welcome to RNote!".to_string(),
             created_at: Local::now(),
             updated_at: Local::now(),
             selected: false,
-        });
-
-        for i in 1..=10 {
-            notes.push(Note {
-                title: format!("Note {}", i),
-                content: format!("Content {}", i),
-                created_at: Local::now(),
-                updated_at: Local::now(),
-                selected: false,
-            });
-        }
-
-        notes
+        }]
     }
 
     /// Run the application's main loop.
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         // Initialize app state
         if self.state.notes.is_empty() {
-            let mut new_note = Note::default();
-            new_note.title = "New Note".to_string();
-            self.state.notes.push(new_note);
-            self.state.editor_state.lines = Jagged::from("Start your note here.");
+            self.create_new_note();
         }
 
         self.running = true;
@@ -196,18 +134,19 @@ The style characters are chosen to be similar to what they are representing:
         ui::render(frame, &mut self.state);
     }
 
-    /// Handle events
     fn handle_events(&mut self) -> Result<()> {
         if let Event::Key(key) = event::read()? {
             if key.kind == KeyEventKind::Press {
                 if let Some(command) = self.key_to_command(key) {
                     self.execute_command(command);
                 } else {
-                    // Pass event to editor if we're in editor view
                     match self.state.current_view {
-                        View::Editor => {
+                        View::Editor | View::LivePreview => {
                             self.editor_event_handler
                                 .on_event(Event::Key(key), &mut self.state.editor_state);
+                        }
+                        View::Rename => {
+                            self.handle_rename_input(key);
                         }
                         _ => {}
                     }
@@ -223,14 +162,39 @@ The style characters are chosen to be similar to what they are representing:
             (KeyModifiers::CONTROL, KeyCode::Down) => Some(Command::NextNote),
             (KeyModifiers::CONTROL, KeyCode::Up) => Some(Command::PreviousNote),
             (KeyModifiers::CONTROL, KeyCode::Char('e')) => Some(Command::SwitchView(View::Editor)),
-            (KeyModifiers::CONTROL, KeyCode::Char('l')) => Some(Command::SwitchView(View::List)),
+            (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
+                Some(Command::SwitchView(View::LivePreview))
+            }
             (KeyModifiers::CONTROL, KeyCode::Char('p')) => Some(Command::SwitchView(View::Preview)),
             (KeyModifiers::CONTROL, KeyCode::Char('n')) => Some(Command::NewNote),
             (KeyModifiers::CONTROL, KeyCode::Char('s')) => Some(Command::SaveNote),
             (KeyModifiers::CONTROL, KeyCode::Char('d')) => Some(Command::DeleteNote),
             (KeyModifiers::CONTROL, KeyCode::Char('j')) => Some(Command::ScrollDown),
             (KeyModifiers::CONTROL, KeyCode::Char('k')) => Some(Command::ScrollUp),
+            (KeyModifiers::CONTROL, KeyCode::Char('r')) => Some(Command::RenameNote),
+            (KeyModifiers::NONE, KeyCode::Enter)
+                if matches!(self.state.current_view, View::Rename) =>
+            {
+                Some(Command::SubmitRename)
+            }
+            (KeyModifiers::NONE, KeyCode::Esc)
+                if matches!(self.state.current_view, View::Rename) =>
+            {
+                Some(Command::CancelRename)
+            }
             _ => None,
+        }
+    }
+
+    fn handle_rename_input(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Char(c) => {
+                self.state.rename_buffer.push(c);
+            }
+            KeyCode::Backspace => {
+                self.state.rename_buffer.pop();
+            }
+            _ => {}
         }
     }
 
@@ -243,20 +207,21 @@ The style characters are chosen to be similar to what they are representing:
             Command::NewNote => self.create_new_note(),
             Command::SaveNote => self.save_current_note(),
             Command::DeleteNote => self.delete_current_note(),
-            Command::ScrollDown => match self.state.current_view {
-                View::Preview => {
+            Command::ScrollDown => {
+                if let View::Preview | View::LivePreview = self.state.current_view {
                     self.state.preview_scroll_offset += 5;
                 }
-                _ => {}
-            },
-            Command::ScrollUp => match self.state.current_view {
-                View::Preview => {
+            }
+            Command::ScrollUp => {
+                if let View::Preview | View::LivePreview = self.state.current_view {
                     if self.state.preview_scroll_offset > 0 {
                         self.state.preview_scroll_offset -= 5;
                     }
                 }
-                _ => {}
-            },
+            }
+            Command::RenameNote => self.start_rename(),
+            Command::SubmitRename => self.submit_rename(),
+            Command::CancelRename => self.cancel_rename(),
         }
     }
 
@@ -299,28 +264,37 @@ The style characters are chosen to be similar to what they are representing:
     }
 
     fn create_new_note(&mut self) {
-        let mut new_note = Note::default();
-        new_note.title = format!("New Note {}", self.state.notes.len() + 1);
-        new_note.content = "Start writing...".to_string();
-        new_note.created_at = Local::now();
-        new_note.updated_at = Local::now();
-
-        self.state.notes.push(new_note);
-        self.state
-            .list_state
-            .select(Some(self.state.notes.len() - 1));
-        self.load_note_to_editor(self.state.notes.len() - 1);
+        self.state.current_view = View::Rename;
+        self.state.rename_buffer = String::new();
+        self.state.creating_new_note = true;
     }
 
     fn save_current_note(&mut self) {
         self.save_editor_content_to_current_note();
-        // Here we would add actual persistence logic
+
+        // Save to storage
+        if let Some(selected) = self.state.list_state.selected {
+            if let Some(note) = self.state.notes.get(selected) {
+                if let Err(e) = self.storage.write_note(note) {
+                    eprintln!("Failed to save note '{}': {}", note.title, e);
+                }
+            }
+        }
     }
 
     fn delete_current_note(&mut self) {
         if let Some(selected) = self.state.list_state.selected {
             if !self.state.notes.is_empty() {
+                // Get the title before removing from memory
+                let title = self.state.notes[selected].title.clone();
+
+                // Remove from memory
                 self.state.notes.remove(selected);
+
+                // Remove from storage
+                if let Err(e) = self.storage.delete_note(&title) {
+                    eprintln!("Failed to delete note '{}' from storage: {}", title, e);
+                }
 
                 // Adjust selection if needed
                 if self.state.notes.is_empty() {
@@ -338,8 +312,77 @@ The style characters are chosen to be similar to what they are representing:
         }
     }
 
+    fn start_rename(&mut self) {
+        if let Some(selected) = self.state.list_state.selected {
+            if let Some(note) = self.state.notes.get(selected) {
+                self.state.rename_buffer = note.title.clone();
+                self.state.current_view = View::Rename;
+            }
+        }
+    }
+
+    fn submit_rename(&mut self) {
+        if self.state.rename_buffer.is_empty() {
+            return;
+        }
+
+        let new_title = self.state.rename_buffer.clone();
+        self.state.rename_buffer.clear();
+
+        if let View::Rename = self.state.current_view {
+            if let Some(selected) = self.state.list_state.selected {
+                // If we're creating a new note
+                if self.state.creating_new_note {
+                    let new_note = Note {
+                        title: new_title,
+                        content: String::new(),
+                        created_at: Local::now(),
+                        updated_at: Local::now(),
+                        selected: false,
+                    };
+
+                    // Save to storage
+                    if let Err(e) = self.storage.write_note(&new_note) {
+                        eprintln!("Failed to save new note: {}", e);
+                    }
+
+                    self.state.notes.push(new_note);
+                    self.state
+                        .list_state
+                        .select(Some(self.state.notes.len() - 1));
+                } else {
+                    // If we're renaming an existing note
+                    if let Some(note) = self.state.notes.get_mut(selected) {
+                        let old_title = note.title.clone();
+                        note.title = new_title;
+                        note.updated_at = Local::now();
+
+                        // Update in storage
+                        if let Err(e) = self.storage.rename_note(&old_title, note) {
+                            eprintln!("Failed to rename note: {}", e);
+                            // Revert on failure
+                            note.title = old_title;
+                        }
+                    }
+                }
+            }
+            self.state.current_view = View::List;
+        }
+    }
+
+    fn cancel_rename(&mut self) {
+        self.state.rename_buffer.clear();
+        self.state.current_view = View::List;
+    }
+
     /// Set running to false to quit the application.
     fn quit(&mut self) {
         self.running = false;
+    }
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
     }
 }
