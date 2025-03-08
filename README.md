@@ -2,6 +2,8 @@
 
 A powerful terminal-based note-taking application built in Rust with full Markdown support, live preview, and syntax highlighting.
 
+![Thoth Note Demo](images/thoth-note-demo.png)
+
 ## 🔮 Why Thoth?
 
 Thoth was the ancient Egyptian deity of wisdom, writing, hieroglyphs, science, and magic. As the divine scribe, he was said to have invented writing, making him the natural namesake for this powerful note-taking application. Just as Thoth was the keeper of divine records and cosmic knowledge, this application serves as your personal scribe in the digital age.
