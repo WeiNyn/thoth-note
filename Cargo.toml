@@ -4,6 +4,12 @@ version = "0.1.0"
 authors = ["WeiNyn <nguyenhuy17798@gmail.com>"]
 license = "MIT"
 edition = "2021"
+readme = "README.md"
+description = "A simple note-taking app written in Rust"
+repository = "https://github.com/WeiNyn/thoth-note"
+keywords = ["note", "note-taking", "markdown", "rust", "tui"]
+categories = ["text-processing", "command-line-utilities"]
+homepage = "https://docs.rs/thoth-note"
 
 [dependencies]
 crossterm = "0.28.1"
