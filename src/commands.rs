@@ -13,4 +13,6 @@ pub enum Command {
     RenameNote,
     SubmitRename,
     CancelRename,
+    MoveNoteUp,
+    MoveNoteDown,
 }

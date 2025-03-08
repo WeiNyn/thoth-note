@@ -69,9 +69,23 @@ impl App {
             eprintln!("Failed to initialize storage: {}", e);
         }
 
-        // Try to load notes from storage
+        // Try to load notes from storage and initialize order if needed
         let mut loaded_notes = Vec::new();
-        if let Ok(notes) = storage.list_notes() {
+        if let Ok(mut notes) = storage.list_notes() {
+            // If notes exist but don't have proper order (all 0), initialize them
+            let all_zero = notes.iter().all(|note| note.order == 0);
+            if all_zero && !notes.is_empty() {
+                // Sort by updated_at first to maintain previous order
+                notes.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+                
+                // Assign orders based on position
+                for (i, note) in notes.iter_mut().enumerate() {
+                    note.order = i;
+                    if let Err(e) = storage.write_note(note) {
+                        eprintln!("Failed to update note order: {}", e);
+                    }
+                }
+            }
             loaded_notes = notes;
         }
 
@@ -104,13 +118,14 @@ impl App {
     }
 
     fn create_example_notes() -> Vec<Note> {
-        // ... [previous implementation]
+        let welcome_content = include_str!("welcome.md");
         vec![Note {
-            title: "Welcome".to_string(),
-            content: "Welcome to RNote!".to_string(),
+            title: "Welcome to RNote".to_string(),
+            content: welcome_content.to_string(),
             created_at: Local::now(),
             updated_at: Local::now(),
             selected: false,
+            order: 0,
         }]
     }
 
@@ -161,6 +176,8 @@ impl App {
             (KeyModifiers::CONTROL, KeyCode::Char('q')) => Some(Command::Quit),
             (KeyModifiers::CONTROL, KeyCode::Down) => Some(Command::NextNote),
             (KeyModifiers::CONTROL, KeyCode::Up) => Some(Command::PreviousNote),
+            (KeyModifiers::ALT, KeyCode::Up) => Some(Command::MoveNoteUp),
+            (KeyModifiers::ALT, KeyCode::Down) => Some(Command::MoveNoteDown),
             (KeyModifiers::CONTROL, KeyCode::Char('e')) => Some(Command::SwitchView(View::Editor)),
             (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
                 Some(Command::SwitchView(View::LivePreview))
@@ -222,6 +239,64 @@ impl App {
             Command::RenameNote => self.start_rename(),
             Command::SubmitRename => self.submit_rename(),
             Command::CancelRename => self.cancel_rename(),
+            Command::MoveNoteUp => self.move_note_up(),
+            Command::MoveNoteDown => self.move_note_down(),
+        }
+    }
+
+    fn move_note_up(&mut self) {
+        if let Some(selected) = self.state.list_state.selected {
+            if selected > 0 {
+                // Get the orders
+                let current_order = self.state.notes[selected].order;
+                let prev_order = self.state.notes[selected - 1].order;
+
+                // Swap orders
+                self.state.notes[selected].order = prev_order;
+                self.state.notes[selected - 1].order = current_order;
+
+                // Save both notes to persist order changes
+                if let Err(e) = self.storage.write_note(&self.state.notes[selected]) {
+                    eprintln!("Failed to save note order: {}", e);
+                }
+                if let Err(e) = self.storage.write_note(&self.state.notes[selected - 1]) {
+                    eprintln!("Failed to save note order: {}", e);
+                }
+
+                // Resort the notes
+                self.state.notes.sort_by_key(|note| note.order);
+
+                // Update selection
+                self.state.list_state.select(Some(selected - 1));
+            }
+        }
+    }
+
+    fn move_note_down(&mut self) {
+        if let Some(selected) = self.state.list_state.selected {
+            if selected < self.state.notes.len() - 1 {
+                // Get the orders
+                let current_order = self.state.notes[selected].order;
+                let next_order = self.state.notes[selected + 1].order;
+
+                // Swap orders
+                self.state.notes[selected].order = next_order;
+                self.state.notes[selected + 1].order = current_order;
+
+                // Save both notes to persist order changes
+                if let Err(e) = self.storage.write_note(&self.state.notes[selected]) {
+                    eprintln!("Failed to save note order: {}", e);
+                }
+                if let Err(e) = self.storage.write_note(&self.state.notes[selected + 1]) {
+                    eprintln!("Failed to save note order: {}", e);
+                }
+
+                // Resort the notes
+                self.state.notes.sort_by_key(|note| note.order);
+
+                // Update selection
+                self.state.list_state.select(Some(selected + 1));
+            }
         }
     }
 
@@ -287,6 +362,7 @@ impl App {
             if !self.state.notes.is_empty() {
                 // Get the title before removing from memory
                 let title = self.state.notes[selected].title.clone();
+                let order = self.state.notes[selected].order;
 
                 // Remove from memory
                 self.state.notes.remove(selected);
@@ -295,6 +371,19 @@ impl App {
                 if let Err(e) = self.storage.delete_note(&title) {
                     eprintln!("Failed to delete note '{}' from storage: {}", title, e);
                 }
+
+                // Adjust remaining notes' order
+                for note in self.state.notes.iter_mut() {
+                    if note.order > order {
+                        note.order -= 1;
+                        if let Err(e) = self.storage.write_note(note) {
+                            eprintln!("Failed to update note order: {}", e);
+                        }
+                    }
+                }
+
+                // Resort the notes after order adjustment
+                self.state.notes.sort_by_key(|note| note.order);
 
                 // Adjust selection if needed
                 if self.state.notes.is_empty() {
@@ -333,12 +422,19 @@ impl App {
             if let Some(selected) = self.state.list_state.selected {
                 // If we're creating a new note
                 if self.state.creating_new_note {
+                    // Find the maximum order and add 1 for the new note
+                    let max_order = self.state.notes.iter()
+                        .map(|note| note.order)
+                        .max()
+                        .unwrap_or(0);
+
                     let new_note = Note {
                         title: new_title,
                         content: String::new(),
                         created_at: Local::now(),
                         updated_at: Local::now(),
                         selected: false,
+                        order: max_order + 1,
                     };
 
                     // Save to storage

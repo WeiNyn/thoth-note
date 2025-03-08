@@ -14,6 +14,7 @@ struct NoteMetadata {
     title: String,
     created_at: DateTime<Local>,
     updated_at: DateTime<Local>,
+    order: usize,
 }
 
 /// File system implementation of the Storage trait
@@ -120,8 +121,8 @@ impl Storage for FSStorage {
             }
         }
 
-        // Sort notes by updated_at (newest first)
-        notes.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        // Sort notes by order
+        notes.sort_by_key(|note| note.order);
 
         Ok(notes)
     }
@@ -149,6 +150,7 @@ impl Storage for FSStorage {
             created_at: metadata.created_at,
             updated_at: metadata.updated_at,
             selected: false,
+            order: metadata.order,
         })
     }
 
@@ -173,6 +175,7 @@ impl Storage for FSStorage {
             title: note.title.clone(),
             created_at: note.created_at,
             updated_at: note.updated_at,
+            order: note.order,
         };
 
         self.write_metadata(&metadata)?;

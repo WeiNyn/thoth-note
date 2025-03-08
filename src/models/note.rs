@@ -16,6 +16,7 @@ pub struct Note {
     pub created_at: DateTime<Local>,
     pub updated_at: DateTime<Local>,
     pub selected: bool,
+    pub order: usize,
 }
 
 impl Default for Note {
@@ -26,6 +27,7 @@ impl Default for Note {
             created_at: Local::now(),
             updated_at: Local::now(),
             selected: false,
+            order: 0,
         }
     }
 }
