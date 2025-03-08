@@ -19,6 +19,7 @@ pub enum View {
     Preview,
     Rename,
     LivePreview,
+    DeleteConfirm,
 }
 
 pub struct AppState {
@@ -30,6 +31,7 @@ pub struct AppState {
     pub theme: AppTheme,
     pub rename_buffer: String,
     pub creating_new_note: bool,
+    pub confirm_delete: bool,
 }
 
 pub struct App {
@@ -52,6 +54,7 @@ impl Default for AppState {
             theme: AppTheme::default(),
             rename_buffer: String::new(),
             creating_new_note: false,
+            confirm_delete: false,
         }
     }
 }
@@ -172,34 +175,36 @@ impl App {
     }
 
     fn key_to_command(&self, key: KeyEvent) -> Option<Command> {
-        match (key.modifiers, key.code) {
-            (KeyModifiers::CONTROL, KeyCode::Char('q')) => Some(Command::Quit),
-            (KeyModifiers::CONTROL, KeyCode::Down) => Some(Command::NextNote),
-            (KeyModifiers::CONTROL, KeyCode::Up) => Some(Command::PreviousNote),
-            (KeyModifiers::ALT, KeyCode::Up) => Some(Command::MoveNoteUp),
-            (KeyModifiers::ALT, KeyCode::Down) => Some(Command::MoveNoteDown),
-            (KeyModifiers::CONTROL, KeyCode::Char('e')) => Some(Command::SwitchView(View::Editor)),
-            (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
-                Some(Command::SwitchView(View::LivePreview))
+        if self.state.current_view == View::DeleteConfirm {
+            match key.code {
+                KeyCode::Enter => Some(Command::DeleteNote),
+                KeyCode::Esc => Some(Command::CancelRename), // Reuse CancelRename as it does the same thing
+                _ => None,
             }
-            (KeyModifiers::CONTROL, KeyCode::Char('p')) => Some(Command::SwitchView(View::Preview)),
-            (KeyModifiers::CONTROL, KeyCode::Char('n')) => Some(Command::NewNote),
-            (KeyModifiers::CONTROL, KeyCode::Char('s')) => Some(Command::SaveNote),
-            (KeyModifiers::CONTROL, KeyCode::Char('d')) => Some(Command::DeleteNote),
-            (KeyModifiers::CONTROL, KeyCode::Char('j')) => Some(Command::ScrollDown),
-            (KeyModifiers::CONTROL, KeyCode::Char('k')) => Some(Command::ScrollUp),
-            (KeyModifiers::CONTROL, KeyCode::Char('r')) => Some(Command::RenameNote),
-            (KeyModifiers::NONE, KeyCode::Enter)
-                if matches!(self.state.current_view, View::Rename) =>
-            {
-                Some(Command::SubmitRename)
+        } else {
+            match (key.modifiers, key.code) {
+                (KeyModifiers::CONTROL, KeyCode::Char('q')) => Some(Command::Quit),
+                (KeyModifiers::CONTROL, KeyCode::Down) => Some(Command::NextNote),
+                (KeyModifiers::CONTROL, KeyCode::Up) => Some(Command::PreviousNote),
+                (KeyModifiers::ALT, KeyCode::Up) => Some(Command::MoveNoteUp),
+                (KeyModifiers::ALT, KeyCode::Down) => Some(Command::MoveNoteDown),
+                (KeyModifiers::CONTROL, KeyCode::Char('e')) => Some(Command::SwitchView(View::Editor)),
+                (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
+                    Some(Command::SwitchView(View::LivePreview))
+                }
+                (KeyModifiers::CONTROL, KeyCode::Char('p')) => Some(Command::SwitchView(View::Preview)),
+                (KeyModifiers::CONTROL, KeyCode::Char('n')) => Some(Command::NewNote),
+                (KeyModifiers::CONTROL, KeyCode::Char('s')) => Some(Command::SaveNote),
+                (KeyModifiers::CONTROL, KeyCode::Char('d')) => Some(Command::DeleteNote),
+                (KeyModifiers::CONTROL, KeyCode::Char('j')) => Some(Command::ScrollDown),
+                (KeyModifiers::CONTROL, KeyCode::Char('k')) => Some(Command::ScrollUp),
+                (KeyModifiers::CONTROL, KeyCode::Char('r')) => Some(Command::RenameNote),
+                (KeyModifiers::NONE, KeyCode::Enter)
+                    if matches!(self.state.current_view, View::Rename) => Some(Command::SubmitRename),
+                (KeyModifiers::NONE, KeyCode::Esc)
+                    if matches!(self.state.current_view, View::Rename) => Some(Command::CancelRename),
+                _ => None,
             }
-            (KeyModifiers::NONE, KeyCode::Esc)
-                if matches!(self.state.current_view, View::Rename) =>
-            {
-                Some(Command::CancelRename)
-            }
-            _ => None,
         }
     }
 
@@ -215,6 +220,11 @@ impl App {
         }
     }
 
+    fn start_delete(&mut self) {
+        self.state.current_view = View::DeleteConfirm;
+        self.state.confirm_delete = false;
+    }
+
     fn execute_command(&mut self, command: Command) {
         match command {
             Command::Quit => self.quit(),
@@ -223,7 +233,17 @@ impl App {
             Command::SwitchView(view) => self.state.current_view = view,
             Command::NewNote => self.create_new_note(),
             Command::SaveNote => self.save_current_note(),
-            Command::DeleteNote => self.delete_current_note(),
+            Command::DeleteNote => {
+                if self.state.current_view == View::DeleteConfirm {
+                    self.state.confirm_delete = true;
+                    self.delete_current_note();
+                    self.state.current_view = View::LivePreview;
+                } else {
+                    self.state.current_view = View::DeleteConfirm;
+                    self.state.confirm_delete = false;
+                    self.state.current_view = View::DeleteConfirm;
+                }
+            }
             Command::ScrollDown => {
                 if let View::Preview | View::LivePreview = self.state.current_view {
                     self.state.preview_scroll_offset += 5;
@@ -238,7 +258,13 @@ impl App {
             }
             Command::RenameNote => self.start_rename(),
             Command::SubmitRename => self.submit_rename(),
-            Command::CancelRename => self.cancel_rename(),
+            Command::CancelRename => {
+                if self.state.current_view == View::DeleteConfirm {
+                    self.state.current_view = View::LivePreview;
+                } else {
+                    self.cancel_rename()
+                }
+            }
             Command::MoveNoteUp => self.move_note_up(),
             Command::MoveNoteDown => self.move_note_down(),
         }
@@ -358,6 +384,12 @@ impl App {
     }
 
     fn delete_current_note(&mut self) {
+        // Only proceed if confirmed
+        if !self.state.confirm_delete {
+            return;
+        }
+        self.state.confirm_delete = false;
+
         if let Some(selected) = self.state.list_state.selected {
             if !self.state.notes.is_empty() {
                 // Get the title before removing from memory
@@ -462,13 +494,13 @@ impl App {
                     }
                 }
             }
-            self.state.current_view = View::List;
+            self.state.current_view = View::LivePreview;
         }
     }
 
     fn cancel_rename(&mut self) {
         self.state.rename_buffer.clear();
-        self.state.current_view = View::List;
+        self.state.current_view = View::LivePreview;
     }
 
     /// Set running to false to quit the application.

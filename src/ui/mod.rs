@@ -3,6 +3,7 @@ mod layout;
 mod note_list;
 mod preview;
 mod rename;
+mod delete_confirm;
 
 use ratatui::Frame;
 
@@ -13,6 +14,7 @@ use layout::create_layout;
 pub use note_list::render_note_list;
 pub use preview::render_preview;
 pub use rename::render_rename;
+pub use delete_confirm::render_delete_confirm;
 
 pub fn render(frame: &mut Frame, state: &mut AppState) {
     let areas = create_layout(frame.area(), state.current_view);
@@ -29,6 +31,7 @@ pub fn render(frame: &mut Frame, state: &mut AppState) {
             render_editor(frame, state, areas.editor.unwrap());
             render_preview(frame, state, areas.preview.unwrap())
         }
+        View::DeleteConfirm => render_delete_confirm(frame, state, frame.area()),
     }
 
     // Add help/status bar if needed

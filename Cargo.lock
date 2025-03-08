@@ -1348,33 +1348,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
-name = "rnote"
-version = "0.1.0"
-dependencies = [
- "ansi-to-tui",
- "catppuccin",
- "chrono",
- "color-eyre",
- "crossterm",
- "dirs",
- "document-features",
- "edtui",
- "edtui-jagged",
- "itertools 0.14.0",
- "pretty_assertions",
- "pulldown-cmark 0.13.0",
- "ratatui",
- "serde",
- "serde_json",
- "syntect",
- "thiserror",
- "tracing",
- "tui-markdown",
- "tui-scrollview",
- "tui-widget-list",
-]
-
-[[package]]
 name = "rstest"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1654,6 +1627,33 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "thoth"
+version = "0.1.0"
+dependencies = [
+ "ansi-to-tui",
+ "catppuccin",
+ "chrono",
+ "color-eyre",
+ "crossterm",
+ "dirs",
+ "document-features",
+ "edtui",
+ "edtui-jagged",
+ "itertools 0.14.0",
+ "pretty_assertions",
+ "pulldown-cmark 0.13.0",
+ "ratatui",
+ "serde",
+ "serde_json",
+ "syntect",
+ "thiserror",
+ "tracing",
+ "tui-markdown",
+ "tui-scrollview",
+ "tui-widget-list",
 ]
 
 [[package]]

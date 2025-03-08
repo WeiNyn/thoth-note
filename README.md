@@ -90,3 +90,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👤 Author
 
 - [@WeiNyn](https://github.com/WeiNyn)
+
+## ☕ Support
+
+If you find Thoth useful, you can [buy me a coffee](https://buymeacoffee.com/weinyn)!
