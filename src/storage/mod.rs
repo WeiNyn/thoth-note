@@ -8,16 +8,16 @@ use error::StorageResult;
 pub trait Storage {
     /// Initialize the storage (create directories, etc.)
     fn init(&self) -> StorageResult<()>;
-    
+
     /// List all available notes
     fn list_notes(&self) -> StorageResult<Vec<Note>>;
-    
+
     /// Read a specific note by title
     fn read_note(&self, title: &str) -> StorageResult<Note>;
-    
+
     /// Write a note to storage
     fn write_note(&self, note: &Note) -> StorageResult<()>;
-    
+
     /// Delete a note from storage
     fn delete_note(&self, title: &str) -> StorageResult<()>;
 

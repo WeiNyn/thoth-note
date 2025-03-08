@@ -12,11 +12,14 @@ pub fn create_layout(area: Rect, view: View) -> Areas {
     if let View::LivePreview = view {
         let columns = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(20),
-                Constraint::Percentage(40),
-                Constraint::Percentage(40),
-            ].as_ref())
+            .constraints(
+                [
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(40),
+                    Constraint::Percentage(40),
+                ]
+                .as_ref(),
+            )
             .split(area);
 
         return Areas {
@@ -27,12 +30,9 @@ pub fn create_layout(area: Rect, view: View) -> Areas {
     }
     let columns = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(20),
-            Constraint::Percentage(80),
-        ].as_ref())
+        .constraints([Constraint::Percentage(20), Constraint::Percentage(80)].as_ref())
         .split(area);
-    
+
     match view {
         View::Editor => Areas {
             note_list: columns[0],

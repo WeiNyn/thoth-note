@@ -80,7 +80,7 @@ impl App {
             if all_zero && !notes.is_empty() {
                 // Sort by updated_at first to maintain previous order
                 notes.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-                
+
                 // Assign orders based on position
                 for (i, note) in notes.iter_mut().enumerate() {
                     note.order = i;
@@ -188,11 +188,15 @@ impl App {
                 (KeyModifiers::CONTROL, KeyCode::Up) => Some(Command::PreviousNote),
                 (KeyModifiers::ALT, KeyCode::Up) => Some(Command::MoveNoteUp),
                 (KeyModifiers::ALT, KeyCode::Down) => Some(Command::MoveNoteDown),
-                (KeyModifiers::CONTROL, KeyCode::Char('e')) => Some(Command::SwitchView(View::Editor)),
+                (KeyModifiers::CONTROL, KeyCode::Char('e')) => {
+                    Some(Command::SwitchView(View::Editor))
+                }
                 (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
                     Some(Command::SwitchView(View::LivePreview))
                 }
-                (KeyModifiers::CONTROL, KeyCode::Char('p')) => Some(Command::SwitchView(View::Preview)),
+                (KeyModifiers::CONTROL, KeyCode::Char('p')) => {
+                    Some(Command::SwitchView(View::Preview))
+                }
                 (KeyModifiers::CONTROL, KeyCode::Char('n')) => Some(Command::NewNote),
                 (KeyModifiers::CONTROL, KeyCode::Char('s')) => Some(Command::SaveNote),
                 (KeyModifiers::CONTROL, KeyCode::Char('d')) => Some(Command::DeleteNote),
@@ -200,9 +204,15 @@ impl App {
                 (KeyModifiers::CONTROL, KeyCode::Char('k')) => Some(Command::ScrollUp),
                 (KeyModifiers::CONTROL, KeyCode::Char('r')) => Some(Command::RenameNote),
                 (KeyModifiers::NONE, KeyCode::Enter)
-                    if matches!(self.state.current_view, View::Rename) => Some(Command::SubmitRename),
+                    if matches!(self.state.current_view, View::Rename) =>
+                {
+                    Some(Command::SubmitRename)
+                }
                 (KeyModifiers::NONE, KeyCode::Esc)
-                    if matches!(self.state.current_view, View::Rename) => Some(Command::CancelRename),
+                    if matches!(self.state.current_view, View::Rename) =>
+                {
+                    Some(Command::CancelRename)
+                }
                 _ => None,
             }
         }
@@ -220,6 +230,7 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
     fn start_delete(&mut self) {
         self.state.current_view = View::DeleteConfirm;
         self.state.confirm_delete = false;
@@ -455,7 +466,10 @@ impl App {
                 // If we're creating a new note
                 if self.state.creating_new_note {
                     // Find the maximum order and add 1 for the new note
-                    let max_order = self.state.notes.iter()
+                    let max_order = self
+                        .state
+                        .notes
+                        .iter()
                         .map(|note| note.order)
                         .max()
                         .unwrap_or(0);

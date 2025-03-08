@@ -1,5 +1,4 @@
 use chrono::{DateTime, Local};
-use serde::{Deserialize, Serialize};
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Rect},
@@ -8,6 +7,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Paragraph, Widget, Wrap},
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Note {
