@@ -23,7 +23,7 @@ itertools = "0.14.0"
 pretty_assertions = "1.4.1"
 tracing = "0.1.41"
 syntect = "5.2.0"
-thiserror = "1.0.58"
+thiserror = "2.0.12"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.140"
 dirs = "6.0.0"
