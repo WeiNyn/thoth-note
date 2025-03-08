@@ -123,7 +123,7 @@ impl App {
     fn create_example_notes() -> Vec<Note> {
         let welcome_content = include_str!("welcome.md");
         vec![Note {
-            title: "Welcome to RNote".to_string(),
+            title: "Welcome to Thoth".to_string(),
             content: welcome_content.to_string(),
             created_at: Local::now(),
             updated_at: Local::now(),
@@ -492,6 +492,8 @@ impl App {
                     self.state
                         .list_state
                         .select(Some(self.state.notes.len() - 1));
+                    self.load_note_to_editor(self.state.notes.len() - 1);
+                    self.state.creating_new_note = false;
                 } else {
                     // If we're renaming an existing note
                     if let Some(note) = self.state.notes.get_mut(selected) {
