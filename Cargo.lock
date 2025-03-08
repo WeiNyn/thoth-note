@@ -1669,7 +1669,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syntect",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tracing",
  "tui-markdown",
  "tui-scrollview",
