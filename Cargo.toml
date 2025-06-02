@@ -18,7 +18,7 @@ path = "src/main.rs"
 [dependencies]
 crossterm = "0.28.1"
 ratatui = "0.29.0"
-color-eyre = "0.6.3"
+color-eyre = "0.6.5"
 tui-widget-list = "0.13.2"
 chrono = { version = "0.4.40", features = ["serde"] }
 edtui = "0.9.6"
